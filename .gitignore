@@ -38,3 +38,24 @@ htmlcov/
 .tox/
 
 *.log
+
+data_cache/
+*.csv
+*.txt
+
+test_*.py
+test*.py
+*_test.py
+*_test*.py
+
+*.db
+*.sqlite
+*.sqlite3
+
+*.pkl
+*.pickle
+*.h5
+*.hdf5
+
+__pycache__/
+*.pyc

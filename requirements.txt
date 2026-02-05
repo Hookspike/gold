@@ -6,7 +6,7 @@ numpy==1.26.4
 scikit-learn==1.5.2
 requests==2.32.3
 beautifulsoup4==4.12.3
-akshare==1.12.85
+akshare==1.18.22
 python-dotenv==1.0.1
 psutil==5.9.8
 ta==0.11.0
