@@ -9,3 +9,4 @@ beautifulsoup4==4.12.3
 akshare==1.12.85
 python-dotenv==1.0.1
 psutil==5.9.8
+ta==0.11.0
