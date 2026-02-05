@@ -59,6 +59,23 @@ class SentimentAnalyzer:
             except Exception as e:
                 print(f"从金十数据获取新闻时出错: {e}")
             
+            try:
+                news_df = ak.stock_news_em(symbol="贵金属")
+                if not news_df.empty:
+                    for _, row in news_df.iterrows():
+                        article_date = pd.to_datetime(row.get('新闻时间', datetime.now()))
+                        if article_date >= cutoff_date:
+                            news_articles.append({
+                                'title': row.get('新闻标题', ''),
+                                'description': row.get('新闻内容', '')[:200],
+                                'content': row.get('新闻内容', ''),
+                                'url': row.get('新闻链接', ''),
+                                'publishedAt': row.get('新闻时间', ''),
+                                'source': '东方财富-贵金属'
+                            })
+            except Exception as e:
+                print(f"从东方财富获取贵金属新闻时出错: {e}")
+            
             print(f"总共获取到 {len(news_articles)} 条黄金相关新闻")
             
             if news_articles:
@@ -169,3 +186,61 @@ class SentimentAnalyzer:
             'neutral_count': neutral_count,
             'sentiment_label': sentiment_label
         }
+    
+    def analyze_market_fear_greed(self, df: pd.DataFrame) -> Dict:
+        """
+        基于价格数据计算恐惧贪婪指数
+        """
+        try:
+            if df.empty or len(df) < 5:
+                return {'index': 50, 'label': '中性'}
+            
+            df = df.copy()
+            df = df.sort_values('date')
+            
+            df['returns'] = df['close'].pct_change()
+            df['volatility'] = df['returns'].rolling(window=5).std()
+            
+            last_return = df['returns'].iloc[-1]
+            last_volatility = df['volatility'].iloc[-1]
+            
+            avg_return = df['returns'].mean()
+            avg_volatility = df['volatility'].mean()
+            
+            momentum_score = 50
+            if last_return > avg_return:
+                momentum_score = 50 + (last_return - avg_return) * 1000
+            else:
+                momentum_score = 50 + (last_return - avg_return) * 1000
+            
+            momentum_score = max(0, min(100, momentum_score))
+            
+            volatility_score = 50
+            if last_volatility < avg_volatility:
+                volatility_score = 50 + (avg_volatility - last_volatility) * 1000
+            else:
+                volatility_score = 50 - (last_volatility - avg_volatility) * 1000
+            
+            volatility_score = max(0, min(100, volatility_score))
+            
+            fear_greed_index = (momentum_score * 0.6 + volatility_score * 0.4)
+            fear_greed_index = max(0, min(100, fear_greed_index))
+            
+            if fear_greed_index >= 75:
+                label = '贪婪'
+            elif fear_greed_index >= 55:
+                label = '乐观'
+            elif fear_greed_index >= 45:
+                label = '中性'
+            elif fear_greed_index >= 25:
+                label = '恐惧'
+            else:
+                label = '极度恐惧'
+            
+            return {
+                'index': round(fear_greed_index, 2),
+                'label': label
+            }
+        except Exception as e:
+            print(f"计算恐惧贪婪指数时出错: {e}")
+            return {'index': 50, 'label': '中性'}

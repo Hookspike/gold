@@ -130,11 +130,16 @@ def health_check():
     """
     try:
         # 检查数据缓存状态
+        price_data = data_cache.get('price_data')
+        technical_data = data_cache.get('technical_data')
+        sentiment_data = data_cache.get('sentiment_data')
+        predictions = data_cache.get('predictions')
+        
         cache_status = {
-            'price_data': len(data_cache.get('price_data', [])) > 0,
-            'technical_data': len(data_cache.get('technical_data', [])) > 0,
-            'sentiment_data': len(data_cache.get('sentiment_data', [])) > 0,
-            'predictions': data_cache.get('predictions') is not None,
+            'price_data': price_data is not None and len(price_data) > 0,
+            'technical_data': technical_data is not None and len(technical_data) > 0,
+            'sentiment_data': sentiment_data is not None and len(sentiment_data) > 0,
+            'predictions': predictions is not None,
             'last_update': data_cache.get('last_update')
         }
         
