@@ -152,27 +152,27 @@ class SentimentAnalyzer:
     def calculate_overall_sentiment(self, sentiment_df: pd.DataFrame) -> Dict:
         if sentiment_df.empty:
             return {
-                'overall_score': 0,
+                'avg_compound': 0,
                 'positive_count': 0,
                 'negative_count': 0,
                 'neutral_count': 0,
                 'sentiment_label': '中性'
             }
         
-        overall_score = sentiment_df['compound'].mean()
+        avg_compound = sentiment_df['compound'].mean()
         positive_count = len(sentiment_df[sentiment_df['compound'] > 0.15])
         negative_count = len(sentiment_df[sentiment_df['compound'] < -0.15])
         neutral_count = len(sentiment_df) - positive_count - negative_count
         
-        if overall_score > 0.15:
+        if avg_compound > 0.15:
             sentiment_label = '乐观'
-        elif overall_score < -0.15:
+        elif avg_compound < -0.15:
             sentiment_label = '悲观'
         else:
             sentiment_label = '中性'
         
         return {
-            'overall_score': overall_score,
+            'avg_compound': avg_compound,
             'positive_count': positive_count,
             'negative_count': negative_count,
             'neutral_count': neutral_count,
