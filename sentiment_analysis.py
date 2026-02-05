@@ -40,26 +40,6 @@ class SentimentAnalyzer:
                 print(f"从东方财富获取新闻时出错: {e}")
             
             try:
-                news_df = ak.news_jin10()
-                if not news_df.empty:
-                    for _, row in news_df.iterrows():
-                        article_date = pd.to_datetime(row.get('datetime', datetime.now()))
-                        if article_date >= cutoff_date:
-                            title = row.get('title', '')
-                            content = row.get('content', '')
-                            if any(keyword in title.lower() or keyword in content.lower() for keyword in gold_keywords):
-                                news_articles.append({
-                                    'title': title,
-                                    'description': content[:200] if content else '',
-                                    'content': content,
-                                    'url': '',
-                                    'publishedAt': row.get('datetime', ''),
-                                    'source': '金十数据'
-                                })
-            except Exception as e:
-                print(f"从金十数据获取新闻时出错: {e}")
-            
-            try:
                 news_df = ak.stock_news_em(symbol="贵金属")
                 if not news_df.empty:
                     for _, row in news_df.iterrows():
@@ -75,6 +55,18 @@ class SentimentAnalyzer:
                             })
             except Exception as e:
                 print(f"从东方财富获取贵金属新闻时出错: {e}")
+            
+            try:
+                kitco_news = self._fetch_kitco_news(days_back)
+                news_articles.extend(kitco_news)
+            except Exception as e:
+                print(f"从Kitco获取新闻时出错: {e}")
+            
+            try:
+                investing_news = self._fetch_investing_news(days_back)
+                news_articles.extend(investing_news)
+            except Exception as e:
+                print(f"从Investing.com获取新闻时出错: {e}")
             
             print(f"总共获取到 {len(news_articles)} 条黄金相关新闻")
             
@@ -196,9 +188,28 @@ class SentimentAnalyzer:
                 return {'index': 50, 'label': '中性'}
             
             df = df.copy()
-            df = df.sort_values('date')
             
-            df['returns'] = df['close'].pct_change()
+            date_col = None
+            for col in df.columns:
+                if col.lower() == 'date':
+                    date_col = col
+                    break
+            
+            if date_col is None:
+                return {'index': 50, 'label': '中性'}
+            
+            df = df.sort_values(date_col)
+            
+            close_col = None
+            for col in df.columns:
+                if col.lower() == 'close':
+                    close_col = col
+                    break
+            
+            if close_col is None:
+                return {'index': 50, 'label': '中性'}
+            
+            df['returns'] = df[close_col].pct_change()
             df['volatility'] = df['returns'].rolling(window=5).std()
             
             last_return = df['returns'].iloc[-1]
@@ -244,3 +255,131 @@ class SentimentAnalyzer:
         except Exception as e:
             print(f"计算恐惧贪婪指数时出错: {e}")
             return {'index': 50, 'label': '中性'}
+    
+    def _fetch_kitco_news(self, days_back: int = 7) -> List[Dict]:
+        """
+        从Kitco获取黄金相关新闻
+        """
+        news_articles = []
+        try:
+            cutoff_date = datetime.now() - timedelta(days=days_back)
+            
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            }
+            
+            url = 'https://www.kitco.com/news/'
+            response = requests.get(url, headers=headers, timeout=10)
+            
+            if response.status_code == 200:
+                soup = BeautifulSoup(response.content, 'html.parser')
+                
+                articles = soup.find_all('article', class_='news-article')
+                
+                for article in articles[:10]:
+                    try:
+                        title_elem = article.find('h3')
+                        if not title_elem:
+                            title_elem = article.find('h2')
+                        
+                        if title_elem:
+                            title = title_elem.get_text(strip=True)
+                            
+                            link_elem = article.find('a', href=True)
+                            if link_elem:
+                                link = link_elem['href']
+                                if not link.startswith('http'):
+                                    link = 'https://www.kitco.com' + link
+                            else:
+                                link = ''
+                            
+                            time_elem = article.find('time')
+                            if time_elem:
+                                time_text = time_elem.get_text(strip=True)
+                            else:
+                                time_text = datetime.now().strftime('%Y-%m-%d')
+                            
+                            desc_elem = article.find('p')
+                            description = desc_elem.get_text(strip=True)[:200] if desc_elem else ''
+                            
+                            gold_keywords = ['gold', 'silver', 'precious metal', 'XAU', 'XAG', 'commodity', 'metal', 'bullion', 'treasury', 'inflation', 'fed', 'federal reserve', 'interest rate', 'dollar', 'USD', 'economy', 'economic']
+                            
+                            if any(keyword.lower() in title.lower() or keyword.lower() in description.lower() for keyword in gold_keywords):
+                                news_articles.append({
+                                    'title': title,
+                                    'description': description,
+                                    'content': description,
+                                    'url': link,
+                                    'publishedAt': time_text,
+                                    'source': 'Kitco'
+                                })
+                    except Exception as e:
+                        print(f"解析Kitco文章时出错: {e}")
+                        continue
+                
+                print(f"从Kitco获取到 {len(news_articles)} 条新闻")
+            
+        except Exception as e:
+            print(f"获取Kitco新闻时出错: {e}")
+        
+        return news_articles
+    
+    def _fetch_investing_news(self, days_back: int = 7) -> List[Dict]:
+        """
+        从Investing.com获取黄金相关新闻
+        """
+        news_articles = []
+        try:
+            cutoff_date = datetime.now() - timedelta(days=days_back)
+            
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            }
+            
+            url = 'https://www.investing.com/commodities/gold-news'
+            response = requests.get(url, headers=headers, timeout=10)
+            
+            if response.status_code == 200:
+                soup = BeautifulSoup(response.content, 'html.parser')
+                
+                articles = soup.find_all('article', class_='js-article-item')
+                
+                for article in articles[:10]:
+                    try:
+                        title_elem = article.find('a', class_='title')
+                        if title_elem:
+                            title = title_elem.get_text(strip=True)
+                            link = 'https://www.investing.com' + title_elem['href']
+                        else:
+                            continue
+                        
+                        time_elem = article.find('span', class_='date')
+                        if time_elem:
+                            time_text = time_elem.get_text(strip=True)
+                        else:
+                            time_text = datetime.now().strftime('%Y-%m-%d')
+                        
+                        desc_elem = article.find('p', class_='articleDesc')
+                        description = desc_elem.get_text(strip=True)[:200] if desc_elem else ''
+                        
+                        gold_keywords = ['gold', 'silver', 'precious metal', 'XAU', 'XAG', 'commodity', 'metal', 'bullion', 'treasury', 'inflation', 'fed', 'federal reserve', 'interest rate', 'dollar', 'USD', 'economy', 'economic']
+                        
+                        if any(keyword.lower() in title.lower() or keyword.lower() in description.lower() for keyword in gold_keywords):
+                            news_articles.append({
+                                'title': title,
+                                'description': description,
+                                'content': description,
+                                'url': link,
+                                'publishedAt': time_text,
+                                'source': 'Investing.com'
+                            })
+                    except Exception as e:
+                        print(f"解析Investing.com文章时出错: {e}")
+                        continue
+                
+                print(f"从Investing.com获取到 {len(news_articles)} 条新闻")
+            
+        except Exception as e:
+            print(f"获取Investing.com新闻时出错: {e}")
+        
+        return news_articles
