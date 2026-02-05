@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: gold-price-prediction-system
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn backend_optimized:app --workers 1 --threads 2 --timeout 120 --bind 0.0.0.0:$PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.9.0
+      - key: RENDER
+        value: "true"
+      - key: HISTORICAL_DAYS
+        value: "90"
+      - key: UPDATE_INTERVAL_HOURS
+        value: "2"
+      - key: PORT
+        value: 5000
+    plan: free
+    region: oregon

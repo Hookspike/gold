@@ -1,0 +1,1086 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>黄金价格预测走势系统</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-financial@0.2.1/dist/chartjs-chart-financial.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #ffd700;
+            --secondary-color: #1a1a2e;
+            --accent-color: #16213e;
+            --success-color: #00ff88;
+            --danger-color: #ff4757;
+            --warning-color: #ffa502;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            color: #fff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .navbar {
+            background: rgba(26, 26, 46, 0.95) !important;
+            backdrop-filter: blur(10px);
+            border-bottom: 2px solid var(--primary-color);
+        }
+        
+        .navbar-brand {
+            color: var(--primary-color) !important;
+            font-weight: bold;
+            font-size: 1.5rem;
+        }
+        
+        .card {
+            background: rgba(22, 33, 62, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 215, 0, 0.2);
+            border-radius: 15px;
+            margin-bottom: 20px;
+        }
+        
+        /* 修改字体颜色为白色 */
+        p {
+            color: #fff !important;
+        }
+        
+        span {
+            color: #fff !important;
+        }
+        
+        h3 {
+            color: #fff !important;
+        }
+        
+        div {
+            color: #fff !important;
+        }
+        
+        label {
+            color: #fff !important;
+        }
+        
+        .text-muted {
+            color: #fff !important;
+        }
+        
+        /* 将metric-value类的字体颜色改为黄色 */
+        .metric-value {
+            color: #ffd700 !important;
+        }
+        
+        .card-header {
+            background: rgba(255, 215, 0, 0.1);
+            border-bottom: 1px solid rgba(255, 215, 0, 0.3);
+            color: var(--primary-color);
+            font-weight: bold;
+        }
+        
+        .metric-card {
+            text-align: center;
+            padding: 20px;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        
+        .metric-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(255, 215, 0, 0.3);
+        }
+        
+        .metric-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+        
+        .metric-label {
+            color: #aaa;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .metric-change {
+            font-size: 1rem;
+            font-weight: bold;
+        }
+        
+        .positive {
+            color: var(--success-color);
+        }
+        
+        .negative {
+            color: var(--danger-color);
+        }
+        
+        .neutral {
+            color: #aaa;
+        }
+        
+        .nav-tabs {
+            border-bottom: 2px solid rgba(255, 215, 0, 0.3);
+        }
+        
+        .nav-tabs .nav-link {
+            color: #aaa;
+            border: none;
+            padding: 15px 25px;
+            font-weight: 500;
+        }
+        
+        .nav-tabs .nav-link:hover {
+            color: var(--primary-color);
+            background: rgba(255, 215, 0, 0.1);
+        }
+        
+        .nav-tabs .nav-link.active {
+            color: var(--primary-color);
+            background: rgba(255, 215, 0, 0.1);
+            border-bottom: 3px solid var(--primary-color);
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 400px;
+            width: 100%;
+        }
+        
+        .btn-gold {
+            background: linear-gradient(135deg, #ffd700 0%, #ffb700 100%);
+            color: #1a1a2e;
+            border: none;
+            font-weight: bold;
+            padding: 10px 25px;
+            border-radius: 25px;
+            transition: all 0.3s;
+        }
+        
+        .btn-gold:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 20px rgba(255, 215, 0, 0.5);
+            color: #1a1a2e;
+        }
+        
+        .sentiment-bar {
+            height: 30px;
+            border-radius: 15px;
+            background: linear-gradient(90deg, #ff4757 0%, #ffa502 50%, #00ff88 100%);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .sentiment-indicator {
+            position: absolute;
+            top: 0;
+            width: 4px;
+            height: 100%;
+            background: #fff;
+            box-shadow: 0 0 10px #fff;
+            transition: left 0.5s ease;
+        }
+        
+        .prediction-card {
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.1) 0%, rgba(255, 183, 0, 0.05) 100%);
+            border-left: 4px solid var(--primary-color);
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+        }
+        
+        .news-item {
+            padding: 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            transition: background 0.3s;
+        }
+        
+        .news-item:hover {
+            background: rgba(255, 215, 0, 0.05);
+        }
+        
+        .news-sentiment {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+        
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(26, 26, 46, 0.9);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            flex-direction: column;
+        }
+        
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid rgba(255, 215, 0, 0.3);
+            border-top: 4px solid var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .last-update {
+            font-size: 0.8rem;
+            color: #888;
+        }
+        
+        .fear-greed-gauge {
+            width: 200px;
+            height: 100px;
+            margin: 0 auto;
+            position: relative;
+        }
+        
+        .gauge-arc {
+            fill: none;
+            stroke-width: 20;
+        }
+        
+        .gauge-needle {
+            width: 2px;
+            height: 80px;
+            background: #fff;
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform-origin: bottom center;
+            transition: transform 0.5s ease;
+        }
+        
+        .support-resistance-level {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+            margin: 5px 0;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+        }
+        
+        .level-price {
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+        
+        .level-type {
+            font-size: 0.9rem;
+            padding: 2px 10px;
+            border-radius: 10px;
+        }
+        
+        .level-support {
+            background: rgba(0, 255, 136, 0.2);
+            color: var(--success-color);
+        }
+        
+        .level-resistance {
+            background: rgba(255, 71, 87, 0.2);
+            color: var(--danger-color);
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">
+                <i class="bi bi-currency-yen"></i> 黄金价格预测系统
+            </a>
+            <div class="ms-auto">
+                <button class="btn btn-gold" onclick="refreshData()">
+                    <i class="bi bi-arrow-clockwise"></i> 刷新数据
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid mt-4">
+        <div class="row" id="metrics">
+            <div class="col-md-3">
+                <div class="card metric-card">
+                    <div class="metric-label">当前价格</div>
+                    <div class="metric-value" id="current-price">--</div>
+                    <div class="metric-change" id="price-change">--</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card metric-card">
+                    <div class="metric-label">今日最高</div>
+                    <div class="metric-value" id="high-price">--</div>
+                    <div class="metric-label">USD/oz</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card metric-card">
+                    <div class="metric-label">今日最低</div>
+                    <div class="metric-value" id="low-price">--</div>
+                    <div class="metric-label">USD/oz</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card metric-card">
+                    <div class="metric-label">市场情绪</div>
+                    <div class="metric-value" id="sentiment-label">--</div>
+                    <div class="metric-change" id="sentiment-score">--</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="bi bi-graph-up"></i> 价格走势
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="priceChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mt-4">
+            <div class="col-12">
+                <ul class="nav nav-tabs" id="analysisTabs" role="tablist">
+                    <li class="nav-item">
+                        <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#technical">
+                            <i class="bi bi-graph-up-arrow"></i> 技术分析
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#sentiment">
+                            <i class="bi bi-emoji-smile"></i> 情绪分析
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#prediction">
+                            <i class="bi bi-magic"></i> 价格预测
+                        </button>
+                    </li>
+                </ul>
+                <div class="tab-content mt-3">
+                    <div class="tab-pane fade show active" id="technical">
+                        <div class="row">
+                            <div class="col-md-8">
+                                <div class="card">
+                                    <div class="card-header">技术指标</div>
+                                    <div class="card-body">
+                                        <div class="chart-container">
+                                            <canvas id="indicatorChart"></canvas>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card">
+                                    <div class="card-header">关键指标</div>
+                                    <div class="card-body">
+                                        <div class="mb-3">
+                                            <label class="form-label">RSI</label>
+                                            <div class="d-flex justify-content-between">
+                                                <span id="rsi-value">--</span>
+                                                <span id="rsi-status" class="badge">--</span>
+                                            </div>
+                                            <div class="progress mt-2">
+                                                <div class="progress-bar" id="rsi-bar" style="width: 0%"></div>
+                                            </div>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">MACD</label>
+                                            <div class="d-flex justify-content-between">
+                                                <span id="macd-value">--</span>
+                                                <span id="macd-status" class="badge">--</span>
+                                            </div>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">综合信号</label>
+                                            <div class="d-flex justify-content-between">
+                                                <span id="signal-value">--</span>
+                                                <span id="signal-status" class="badge">--</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="card">
+                                    <div class="card-header">支撑位/阻力位</div>
+                                    <div class="card-body" id="support-resistance">
+                                        <p class="text-muted">加载中...</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="tab-pane fade" id="sentiment">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-header">市场情绪指数</div>
+                                    <div class="card-body">
+                                        <div class="text-center mb-4">
+                                            <div class="sentiment-bar">
+                                                <div class="sentiment-indicator" id="sentiment-indicator"></div>
+                                            </div>
+                                            <div class="mt-2">
+                                                <span class="text-danger">恐惧</span>
+                                                <span class="mx-3">中性</span>
+                                                <span class="text-success">贪婪</span>
+                                            </div>
+                                        </div>
+                                        <div class="row text-center">
+                                            <div class="col-4">
+                                                <div class="metric-value text-success" id="positive-count">--</div>
+                                                <div class="metric-label">积极</div>
+                                            </div>
+                                            <div class="col-4">
+                                                <div class="metric-value text-muted" id="neutral-count">--</div>
+                                                <div class="metric-label">中性</div>
+                                            </div>
+                                            <div class="col-4">
+                                                <div class="metric-value text-danger" id="negative-count">--</div>
+                                                <div class="metric-label">消极</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="card">
+                                    <div class="card-header">恐惧贪婪指数</div>
+                                    <div class="card-body text-center">
+                                        <div class="fear-greed-gauge">
+                                            <svg viewBox="0 0 200 100">
+                                                <path class="gauge-arc" d="M 20 90 A 80 80 0 0 1 180 90" 
+                                                      stroke="#ff4757" />
+                                                <path class="gauge-arc" d="M 20 90 A 80 80 0 0 1 180 90" 
+                                                      stroke="#ffa502" stroke-dasharray="251 251" />
+                                                <path class="gauge-arc" d="M 20 90 A 80 80 0 0 1 180 90" 
+                                                      stroke="#00ff88" stroke-dasharray="125 376" />
+                                            </svg>
+                                            <div class="gauge-needle" id="fear-greed-needle"></div>
+                                        </div>
+                                        <h3 id="fear-greed-label" class="mt-3">--</h3>
+                                        <p id="fear-greed-index" class="text-muted">指数: --</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-header">最新新闻</div>
+                                    <div class="card-body" id="news-container" style="max-height: 500px; overflow-y: auto;">
+                                        <p class="text-muted">加载中...</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="tab-pane fade" id="prediction">
+                        <div class="row">
+                            <div class="col-md-8">
+                                <div class="card">
+                                    <div class="card-header">价格预测</div>
+                                    <div class="card-body">
+                                        <div class="chart-container">
+                                            <canvas id="predictionChart"></canvas>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card">
+                                    <div class="card-header">预测总结</div>
+                                    <div class="card-body">
+                                        <div class="mb-3">
+                                            <label class="form-label">预测趋势</label>
+                                            <h3 id="prediction-trend" class="text-center">--</h3>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">当前价格</label>
+                                            <h4 id="prediction-current" class="text-center">--</h4>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="card">
+                                    <div class="card-header">未来预测</div>
+                                    <div class="card-body" id="prediction-details">
+                                        <p class="text-muted">加载中...</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mt-4 mb-4">
+            <div class="col-12 text-center">
+                <p class="last-update" id="last-update">最后更新: --</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="loading-overlay" id="loading-overlay">
+        <div class="spinner"></div>
+        <p class="mt-3">正在加载数据...</p>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let priceChart, indicatorChart, predictionChart;
+        
+        async function fetchData(endpoint) {
+            try {
+                console.log(`开始获取${endpoint}数据...`);
+                const response = await fetch(`/api/${endpoint}`);
+                console.log(`${endpoint}响应状态:`, response.status);
+                const data = await response.json();
+                console.log(`${endpoint}数据:`, data);
+                return data;
+            } catch (error) {
+                console.error(`Error fetching ${endpoint}:`, error);
+                return { success: false, error: error.message };
+            }
+        }
+        
+        function showLoading() {
+            document.getElementById('loading-overlay').style.display = 'flex';
+        }
+        
+        function hideLoading() {
+            document.getElementById('loading-overlay').style.display = 'none';
+        }
+        
+        function updateMetrics(data) {
+            const currentPrice = data.current_price || 0;
+            const high = data.high || 0;
+            const low = data.low || 0;
+            const volume = data.volume || 0;
+            const rsi = data.rsi || 0;
+            const macd = data.macd || 0;
+            const signal = data.overall_signal || 0;
+            
+            document.getElementById('current-price').textContent = `$${currentPrice.toFixed(2)}`;
+            document.getElementById('high-price').textContent = `$${high.toFixed(2)}`;
+            document.getElementById('low-price').textContent = `$${low.toFixed(2)}`;
+            
+            const priceChange = data.realtime?.change_percent || 0;
+            const priceChangeEl = document.getElementById('price-change');
+            priceChangeEl.textContent = `${priceChange >= 0 ? '+' : ''}${priceChange.toFixed(2)}%`;
+            priceChangeEl.className = `metric-change ${priceChange >= 0 ? 'positive' : 'negative'}`;
+            
+            const sentiment = data.sentiment || {};
+            document.getElementById('sentiment-label').textContent = sentiment.sentiment_label || '--';
+            const sentimentScore = sentiment.avg_compound || 0;
+            const sentimentScoreEl = document.getElementById('sentiment-score');
+            sentimentScoreEl.textContent = sentimentScore.toFixed(3);
+            sentimentScoreEl.className = `metric-change ${sentimentScore > 0.1 ? 'positive' : sentimentScore < -0.1 ? 'negative' : 'neutral'}`;
+            
+            const rsiEl = document.getElementById('rsi-value');
+            rsiEl.textContent = rsi.toFixed(2);
+            const rsiStatus = document.getElementById('rsi-status');
+            if (rsi > 70) {
+                rsiStatus.textContent = '超买';
+                rsiStatus.className = 'badge bg-danger';
+            } else if (rsi < 30) {
+                rsiStatus.textContent = '超卖';
+                rsiStatus.className = 'badge bg-success';
+            } else {
+                rsiStatus.textContent = '中性';
+                rsiStatus.className = 'badge bg-secondary';
+            }
+            document.getElementById('rsi-bar').style.width = `${rsi}%`;
+            
+            const macdEl = document.getElementById('macd-value');
+            macdEl.textContent = macd.toFixed(4);
+            const macdStatus = document.getElementById('macd-status');
+            if (macd > 0) {
+                macdStatus.textContent = '看涨';
+                macdStatus.className = 'badge bg-success';
+            } else {
+                macdStatus.textContent = '看跌';
+                macdStatus.className = 'badge bg-danger';
+            }
+            
+            const signalEl = document.getElementById('signal-value');
+            signalEl.textContent = signal.toFixed(2);
+            const signalStatus = document.getElementById('signal-status');
+            if (signal > 0.3) {
+                signalStatus.textContent = '买入';
+                signalStatus.className = 'badge bg-success';
+            } else if (signal < -0.3) {
+                signalStatus.textContent = '卖出';
+                signalStatus.className = 'badge bg-danger';
+            } else {
+                signalStatus.textContent = '持有';
+                signalStatus.className = 'badge bg-secondary';
+            }
+        }
+        
+        function initPriceChart(priceData, technicalData) {
+            const ctx = document.getElementById('priceChart').getContext('2d');
+            
+            if (priceChart) {
+                priceChart.destroy();
+            }
+            
+            console.log('Price data:', priceData);
+            console.log('Technical data:', technicalData);
+            
+            // 确保数据按日期排序
+            priceData.sort((a, b) => new Date(a.Date) - new Date(b.Date));
+            if (technicalData && technicalData.length > 0) {
+                technicalData.sort((a, b) => new Date(a.Date) - new Date(b.Date));
+            }
+            
+            // 使用字符串形式的日期作为labels
+            const labels = priceData.map(d => new Date(d.Date).toLocaleDateString());
+            const closePrices = priceData.map(d => d.Close);
+            const sma20 = technicalData && technicalData.length > 0 ? technicalData.map(d => d.SMA_20) : priceData.map(d => d.Close);
+            const sma50 = technicalData && technicalData.length > 0 ? technicalData.map(d => d.SMA_50) : priceData.map(d => d.Close);
+            
+            console.log('Labels:', labels);
+            console.log('Close prices:', closePrices);
+            console.log('SMA 20:', sma20);
+            console.log('SMA 50:', sma50);
+            
+            // 使用最基本的配置
+            priceChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: '收盘价',
+                        data: closePrices,
+                        borderColor: '#ffd700',
+                        backgroundColor: 'rgba(255, 215, 0, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true
+                        }
+                    },
+                    scales: {
+                        x: {
+                            display: true
+                        },
+                        y: {
+                            display: true
+                        }
+                    }
+                }
+            });
+        }
+        
+        function initIndicatorChart(data) {
+            const ctx = document.getElementById('indicatorChart').getContext('2d');
+            
+            if (indicatorChart) {
+                indicatorChart.destroy();
+            }
+            
+            const labels = data.map(d => d.Date);
+            const rsi = data.map(d => d.RSI);
+            const macd = data.map(d => d.MACD);
+            
+            indicatorChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'RSI',
+                        data: rsi,
+                        borderColor: '#a855f7',
+                        backgroundColor: 'rgba(168, 85, 247, 0.1)',
+                        yAxisID: 'y',
+                        tension: 0.4,
+                        pointRadius: 0
+                    }, {
+                        label: 'MACD',
+                        data: macd,
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        yAxisID: 'y1',
+                        tension: 0.4,
+                        pointRadius: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        intersect: false,
+                        mode: 'index'
+                    },
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: '#fff'
+                            }
+                        },
+                        annotation: {
+                            annotations: {
+                                rsi70: {
+                                    type: 'line',
+                                    yMin: 70,
+                                    yMax: 70,
+                                    borderColor: '#ef4444',
+                                    borderWidth: 2,
+                                    borderDash: [5, 5]
+                                },
+                                rsi30: {
+                                    type: 'line',
+                                    yMin: 30,
+                                    yMax: 30,
+                                    borderColor: '#22c55e',
+                                    borderWidth: 2,
+                                    borderDash: [5, 5]
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            type: 'time',
+                            time: {
+                                unit: 'day'
+                            },
+                            ticks: {
+                                color: '#888'
+                            },
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            }
+                        },
+                        y: {
+                            type: 'linear',
+                            position: 'left',
+                            min: 0,
+                            max: 100,
+                            ticks: {
+                                color: '#888'
+                            },
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            }
+                        },
+                        y1: {
+                            type: 'linear',
+                            position: 'right',
+                            ticks: {
+                                color: '#888'
+                            },
+                            grid: {
+                                drawOnChartArea: false
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        function updateSentimentAnalysis(data) {
+            const overall = data.overall || {};
+            const fearGreed = data.fear_greed || {};
+            
+            const sentimentScore = overall.avg_compound || 0;
+            const indicatorPos = ((sentimentScore + 1) / 2) * 100;
+            document.getElementById('sentiment-indicator').style.left = `${indicatorPos}%`;
+            
+            document.getElementById('positive-count').textContent = overall.positive_count || 0;
+            document.getElementById('neutral-count').textContent = overall.neutral_count || 0;
+            document.getElementById('negative-count').textContent = overall.negative_count || 0;
+            
+            const fgIndex = fearGreed.index || 50;
+            const fgRotation = (fgIndex - 50) * 1.8;
+            document.getElementById('fear-greed-needle').style.transform = `rotate(${fgRotation}deg)`;
+            document.getElementById('fear-greed-label').textContent = fearGreed.label || '--';
+            document.getElementById('fear-greed-index').textContent = `指数: ${fgIndex}`;
+            
+            const newsData = data.data || [];
+            const newsContainer = document.getElementById('news-container');
+            
+            if (newsData.length === 0) {
+                newsContainer.innerHTML = '<p class="text-muted">暂无新闻数据</p>';
+                return;
+            }
+            
+            newsContainer.innerHTML = newsData.slice(0, 3).map(news => {
+                const sentiment = news.compound || 0;
+                let sentimentClass, sentimentLabel;
+                if (sentiment > 0.1) {
+                    sentimentClass = 'bg-success';
+                    sentimentLabel = '积极';
+                } else if (sentiment < -0.1) {
+                    sentimentClass = 'bg-danger';
+                    sentimentLabel = '消极';
+                } else {
+                    sentimentClass = 'bg-secondary';
+                    sentimentLabel = '中性';
+                }
+                
+                return `
+                    <div class="news-item">
+                        <h6 class="mb-2">${news.title || '无标题'}</h6>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="text-muted small">${news.source || '未知来源'}</span>
+                            <span class="news-sentiment ${sentimentClass}">${sentimentLabel}</span>
+                        </div>
+                        <a href="${news.url || '#'}" target="_blank" class="btn btn-sm btn-link mt-2">阅读更多</a>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        function updateSupportResistance(data) {
+            const container = document.getElementById('support-resistance');
+            
+            const support = data.support || [];
+            const resistance = data.resistance || [];
+            
+            if (support.length === 0 && resistance.length === 0) {
+                container.innerHTML = '<p class="text-muted">暂无数据</p>';
+                return;
+            }
+            
+            let html = '';
+            
+            if (support.length > 0) {
+                html += '<h6 class="mt-3 mb-2">支撑位</h6>';
+                support.forEach(level => {
+                    html += `
+                        <div class="support-resistance-level">
+                            <span class="level-price">$${level.toFixed(2)}</span>
+                            <span class="level-type level-support">支撑</span>
+                        </div>
+                    `;
+                });
+            }
+            
+            if (resistance.length > 0) {
+                html += '<h6 class="mt-3 mb-2">阻力位</h6>';
+                resistance.forEach(level => {
+                    html += `
+                        <div class="support-resistance-level">
+                            <span class="level-price">$${level.toFixed(2)}</span>
+                            <span class="level-type level-resistance">阻力</span>
+                        </div>
+                    `;
+                });
+            }
+            
+            container.innerHTML = html;
+        }
+        
+        function updatePrediction(data) {
+            if (!data || !data.predictions) {
+                return;
+            }
+            
+            const predictions = data.predictions;
+            const currentPrice = data.current_price || 0;
+            const trend = data.trend || 'Neutral';
+            
+            document.getElementById('prediction-trend').textContent = trend;
+            document.getElementById('prediction-trend').className = `text-center ${trend === 'Bullish' ? 'text-success' : trend === 'Bearish' ? 'text-danger' : 'text-muted'}`;
+            document.getElementById('prediction-current').textContent = `$${currentPrice.toFixed(2)}`;
+            
+            const labels = ['当前'];
+            const prices = [currentPrice];
+            
+            Object.keys(predictions).forEach(day => {
+                const pred = predictions[day];
+                if (pred && pred.predicted_price !== undefined) {
+                    labels.push(`第${day.replace('day_', '')}天`);
+                    prices.push(pred.predicted_price);
+                }
+            });
+            
+            const ctx = document.getElementById('predictionChart').getContext('2d');
+            
+            if (predictionChart) {
+                predictionChart.destroy();
+            }
+            
+            predictionChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: '预测价格',
+                        data: prices,
+                        borderColor: '#ffd700',
+                        backgroundColor: 'rgba(255, 215, 0, 0.2)',
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 6,
+                        pointHoverRadius: 8,
+                        pointBackgroundColor: ['#ff4757', ...Array(prices.length - 1).fill('#ffd700')]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: '#fff'
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: {
+                                color: '#888'
+                            },
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            }
+                        },
+                        y: {
+                            ticks: {
+                                color: '#888',
+                                callback: function(value) {
+                                    return '$' + value.toFixed(2);
+                                }
+                            },
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            }
+                        }
+                    }
+                }
+            });
+            
+            const detailsContainer = document.getElementById('prediction-details');
+            const validDays = Object.keys(predictions).filter(day => day.startsWith('day_') && predictions[day] && predictions[day].predicted_price !== undefined);
+            
+            if (validDays.length === 0) {
+                detailsContainer.innerHTML = '<p class="text-muted">暂无预测数据</p>';
+            } else {
+                detailsContainer.innerHTML = validDays.map(day => {
+                    const pred = predictions[day];
+                    const changeClass = pred.price_change_percent >= 0 ? 'text-success' : 'text-danger';
+                    return `
+                        <div class="prediction-card">
+                            <div class="d-flex justify-content-between">
+                                <span>${day.replace('day_', '第')}天</span>
+                                <span class="level-price">$${pred.predicted_price.toFixed(2)}</span>
+                            </div>
+                            <div class="d-flex justify-content-between mt-1">
+                                <span class="text-muted">${pred.date || '--'}</span>
+                                <span class="${changeClass}">${pred.price_change_percent >= 0 ? '+' : ''}${pred.price_change_percent.toFixed(2)}%</span>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+        }
+        
+        async function loadAllData() {
+            showLoading();
+            
+            try {
+                console.log('开始加载数据...');
+                const [priceData, technicalData, sentimentData, predictionsData, srData, summaryData] = await Promise.all([
+                    fetchData('price'),
+                    fetchData('technical'),
+                    fetchData('sentiment'),
+                    fetchData('predictions'),
+                    fetchData('support-resistance'),
+                    fetchData('summary')
+                ]);
+                
+                console.log('Price data:', priceData);
+                console.log('Technical data:', technicalData);
+                
+                console.log('Price data success:', priceData.success);
+                console.log('Price data length:', priceData.data ? priceData.data.length : 0);
+                
+                if (summaryData.success) {
+                    updateMetrics(summaryData.data);
+                    document.getElementById('last-update').textContent = `最后更新: ${summaryData.last_update || '--'}`;
+                }
+                
+                if (priceData.success && priceData.data.length > 0) {
+                    initPriceChart(priceData.data, technicalData.data);
+                }
+                
+                if (technicalData.success && technicalData.data.length > 0) {
+                    initIndicatorChart(technicalData.data);
+                }
+                
+                if (sentimentData.success) {
+                    updateSentimentAnalysis(sentimentData);
+                }
+                
+                if (srData.success) {
+                    updateSupportResistance(srData.data);
+                }
+                
+                if (predictionsData.success) {
+                    updatePrediction(predictionsData.data);
+                }
+                
+            } catch (error) {
+                console.error('Error loading data:', error);
+                alert('加载数据失败，请稍后重试');
+            }
+            
+            hideLoading();
+        }
+        
+        async function refreshData() {
+            showLoading();
+            
+            try {
+                const response = await fetch('/api/refresh', { method: 'POST' });
+                const result = await response.json();
+                
+                if (result.success) {
+                    await loadAllData();
+                } else {
+                    alert('刷新失败: ' + result.error);
+                }
+            } catch (error) {
+                console.error('Error refreshing data:', error);
+                alert('刷新失败，请稍后重试');
+            }
+            
+            hideLoading();
+        }
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            loadAllData();
+            
+            setInterval(loadAllData, 300000);
+        });
+    </script>
+</body>
+</html>
