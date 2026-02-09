@@ -379,6 +379,11 @@
                             <i class="bi bi-magic"></i> 价格预测
                         </button>
                     </li>
+                    <li class="nav-item">
+                        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#centralbank">
+                            <i class="bi bi-bank"></i> 央行增持
+                        </button>
+                    </li>
                 </ul>
                 <div class="tab-content mt-3">
                     <div class="tab-pane fade show active" id="technical">
@@ -528,6 +533,28 @@
                             </div>
                         </div>
                     </div>
+                    <div class="tab-pane fade" id="centralbank">
+                        <div class="row">
+                            <div class="col-md-8">
+                                <div class="card">
+                                    <div class="card-header">央行黄金储备趋势</div>
+                                    <div class="card-body">
+                                        <div class="chart-container">
+                                            <canvas id="centralBankChart"></canvas>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card">
+                                    <div class="card-header">主要央行储备</div>
+                                    <div class="card-body" id="centralbank-details">
+                                        <p class="text-muted">加载中...</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -548,7 +575,7 @@
     <script>
         Chart.register(window.ChartAnnotation);
         
-        let priceChart, indicatorChart, predictionChart;
+        let priceChart, indicatorChart, predictionChart, centralBankChart;
         
         async function fetchData(endpoint) {
             try {
@@ -1005,18 +1032,158 @@
             }
         }
         
+        function initCentralBankChart(data) {
+            const ctx = document.getElementById('centralBankChart').getContext('2d');
+            
+            if (centralBankChart) {
+                centralBankChart.destroy();
+            }
+            
+            const labels = data.map(d => d.date);
+            const china = data.map(d => d.china);
+            const russia = data.map(d => d.russia);
+            const turkey = data.map(d => d.turkey);
+            const india = data.map(d => d.india);
+            
+            centralBankChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: '中国',
+                        data: china,
+                        borderColor: '#ef4444',
+                        backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                        fill: false,
+                        tension: 0.4,
+                        pointRadius: 4,
+                        pointHoverRadius: 6
+                    }, {
+                        label: '俄罗斯',
+                        data: russia,
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        fill: false,
+                        tension: 0.4,
+                        pointRadius: 4,
+                        pointHoverRadius: 6
+                    }, {
+                        label: '土耳其',
+                        data: turkey,
+                        borderColor: '#f59e0b',
+                        backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                        fill: false,
+                        tension: 0.4,
+                        pointRadius: 4,
+                        pointHoverRadius: 6
+                    }, {
+                        label: '印度',
+                        data: india,
+                        borderColor: '#10b981',
+                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                        fill: false,
+                        tension: 0.4,
+                        pointRadius: 4,
+                        pointHoverRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: '#fff'
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `${context.dataset.label}: ${context.parsed.y.toFixed(1)} 吨`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: {
+                                color: '#888',
+                                maxRotation: 45,
+                                minRotation: 45
+                            },
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            }
+                        },
+                        y: {
+                            ticks: {
+                                color: '#888',
+                                callback: function(value) {
+                                    return value.toFixed(0) + ' 吨';
+                                }
+                            },
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        function updateCentralBankDetails(data) {
+            const container = document.getElementById('centralbank-details');
+            
+            if (!data || data.length === 0) {
+                container.innerHTML = '<p class="text-muted">暂无数据</p>';
+                return;
+            }
+            
+            const latestData = data[data.length - 1];
+            const countries = [
+                { key: 'china', name: '中国', flag: '🇨🇳' },
+                { key: 'russia', name: '俄罗斯', flag: '🇷🇺' },
+                { key: 'turkey', name: '土耳其', flag: '🇹🇷' },
+                { key: 'india', name: '印度', flag: '🇮🇳' },
+                { key: 'kazakhstan', name: '哈萨克斯坦', flag: '🇰🇿' },
+                { key: 'uzbekistan', name: '乌兹别克斯坦', flag: '🇺🇿' },
+                { key: 'saudi_arabia', name: '沙特阿拉伯', flag: '🇸🇦' }
+            ];
+            
+            const sortedCountries = countries
+                .map(c => ({ ...c, reserves: latestData[c.key] || 0 }))
+                .sort((a, b) => b.reserves - a.reserves);
+            
+            container.innerHTML = sortedCountries.map((country, index) => `
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div class="d-flex align-items-center">
+                        <span class="me-2">${country.flag}</span>
+                        <div>
+                            <div class="fw-bold">${country.name}</div>
+                            <div class="text-muted small">排名: ${index + 1}</div>
+                        </div>
+                    </div>
+                    <div class="text-end">
+                        <div class="fw-bold">${country.reserves.toFixed(1)} 吨</div>
+                        <div class="text-muted small">黄金储备</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
         async function loadAllData() {
             showLoading();
             
             try {
                 console.log('开始加载数据...');
-                const [priceData, technicalData, sentimentData, predictionsData, srData, summaryData] = await Promise.all([
+                const [priceData, technicalData, sentimentData, predictionsData, srData, summaryData, centralBankData] = await Promise.all([
                     fetchData('price'),
                     fetchData('technical'),
                     fetchData('sentiment'),
                     fetchData('predictions'),
                     fetchData('support-resistance'),
-                    fetchData('summary')
+                    fetchData('summary'),
+                    fetchData('central-bank')
                 ]);
                 
                 console.log('Price data:', priceData);
@@ -1048,6 +1215,11 @@
                 
                 if (predictionsData.success) {
                     updatePrediction(predictionsData.data);
+                }
+                
+                if (centralBankData.success && centralBankData.data.length > 0) {
+                    initCentralBankChart(centralBankData.data);
+                    updateCentralBankDetails(centralBankData.data);
                 }
                 
             } catch (error) {

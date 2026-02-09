@@ -4,6 +4,7 @@ from data_fetcher import GoldDataFetcher
 from technical_analysis import TechnicalAnalyzer
 from sentiment_analysis import SentimentAnalyzer
 from predictor import GoldPricePredictor
+from central_bank_reserves import CentralBankGoldReserves
 from config import Config
 import pandas as pd
 from datetime import datetime
@@ -43,6 +44,7 @@ data_cache = {
     'technical_data': None,
     'sentiment_data': None,
     'predictions': None,
+    'central_bank_data': None,
     'last_update': None
 }
 
@@ -99,6 +101,16 @@ def update_data():
         data_cache['overall_sentiment'] = overall_sentiment
         data_cache['fear_greed'] = fear_greed
         data_cache['realtime_price'] = fetcher.fetch_realtime_price()
+        
+        # 获取央行增持黄金数据
+        try:
+            central_bank = CentralBankGoldReserves()
+            central_bank_data = central_bank.get_central_bank_data()
+            data_cache['central_bank_data'] = central_bank_data
+        except Exception as e:
+            logger.error(f"获取央行增持数据失败: {e}")
+            data_cache['central_bank_data'] = {'success': False, 'error': str(e), 'data': []}
+        
         data_cache['last_update'] = datetime.now().isoformat()
         
         # 更新性能指标
@@ -289,6 +301,13 @@ def get_support_resistance():
         'data': data_cache['support_resistance'],
         'last_update': data_cache['last_update']
     })
+
+@app.route('/api/central-bank')
+def get_central_bank_data():
+    performance_metrics['api_call_count'] += 1
+    if data_cache['central_bank_data'] is None:
+        update_data()
+    return jsonify(data_cache['central_bank_data'])
 
 @app.route('/api/refresh', methods=['POST'])
 def refresh_data():
