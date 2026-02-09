@@ -226,6 +226,42 @@ def health_check():
 def index():
     return render_template('index.html')
 
+@app.route('/debug_index.html')
+def debug_index():
+    return render_template('debug_index.html')
+
+@app.route('/simple_index.html')
+def simple_index():
+    return render_template('simple_index.html')
+
+@app.route('/basic_index.html')
+def basic_index():
+    return render_template('basic_index.html')
+
+@app.route('/api_test.html')
+def api_test():
+    return render_template('api_test.html')
+
+@app.route('/simple_test.html')
+def simple_test():
+    return render_template('simple_test.html')
+
+@app.route('/safeload.html')
+def safeload():
+    return render_template('safeload.html')
+
+@app.route('/fixtest.html')
+def fixtest():
+    return render_template('fixtest.html')
+
+@app.route('/diagnose.html')
+def diagnose():
+    return render_template('diagnose.html')
+
+@app.route('/diagnose_detailed.html')
+def diagnose_detailed():
+    return render_template('diagnose_detailed.html')
+
 @app.route('/api/price')
 def get_price_data():
     performance_metrics['api_call_count'] += 1

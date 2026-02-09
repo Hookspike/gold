@@ -20,12 +20,15 @@ class GoldDataFetcher:
         
         # 优化数据源优先级
         self.data_sources = [
-            'sina',      # 优先级1：实时数据
-            'akshare',   # 优先级2：国内数据源
-            'kitco',     # 优先级3：专业黄金数据
-            'investing', # 优先级4：国际数据源
-            'yfinance'   # 优先级5：备用数据源
+            'akshare',   # 优先级1：国内数据源
+            'kitco',     # 优先级2：专业黄金数据
+            'investing', # 优先级3：国际数据源
+            'yfinance',  # 优先级4：备用数据源
+            'mock'       # 优先级5：模拟数据（后备方案）
         ]
+        
+        # 实时价格数据源（独立于历史数据）
+        self.realtime_sources = ['sina', 'alpha_vantage', 'finnhub', 'yfinance']
         
         # 本地缓存配置
         self.cache_dir = 'data_cache'
@@ -200,17 +203,17 @@ class GoldDataFetcher:
                 raise ValueError("AkShare 黄金数据为空")
             
             # 确保数据格式正确
-            gold_df = gold_df.sort_values('日期')
+            gold_df = gold_df.sort_values('date')
             gold_df = gold_df.tail(period)
             
             # 重命名列以匹配系统需求
             gold_df = gold_df.rename(columns={
-                '日期': 'Date',
-                '开盘': 'Open',
-                '最高': 'High',
-                '最低': 'Low',
-                '收盘': 'Close',
-                '成交量': 'Volume'
+                'date': 'Date',
+                'open': 'Open',
+                'high': 'High',
+                'low': 'Low',
+                'close': 'Close',
+                'volume': 'Volume'
             })
             
             # 确保所有必要列存在
@@ -495,7 +498,7 @@ class GoldDataFetcher:
         return {}
     
     def fetch_realtime_price(self) -> Dict:
-        for source in self.data_sources:
+        for source in self.realtime_sources:
             try:
                 price_data = self._fetch_realtime_from_source(source)
                 if price_data and price_data.get('price', 0) > 0:

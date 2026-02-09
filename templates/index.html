@@ -573,8 +573,6 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        Chart.register(window.ChartAnnotation);
-        
         let priceChart, indicatorChart, predictionChart, centralBankChart;
         
         async function fetchData(endpoint) {
@@ -772,36 +770,14 @@
                             labels: {
                                 color: '#fff'
                             }
-                        },
-                        annotation: {
-                            annotations: {
-                                rsi70: {
-                                    type: 'line',
-                                    yMin: 70,
-                                    yMax: 70,
-                                    borderColor: '#ef4444',
-                                    borderWidth: 2,
-                                    borderDash: [5, 5]
-                                },
-                                rsi30: {
-                                    type: 'line',
-                                    yMin: 30,
-                                    yMax: 30,
-                                    borderColor: '#22c55e',
-                                    borderWidth: 2,
-                                    borderDash: [5, 5]
-                                }
-                            }
                         }
                     },
                     scales: {
                         x: {
-                            type: 'time',
-                            time: {
-                                unit: 'day'
-                            },
                             ticks: {
-                                color: '#888'
+                                color: '#888',
+                                maxRotation: 45,
+                                minRotation: 45
                             },
                             grid: {
                                 color: 'rgba(255, 255, 255, 0.1)'
@@ -1040,6 +1016,7 @@
             }
             
             const labels = data.map(d => d.date);
+            const usa = data.map(d => d.usa);
             const china = data.map(d => d.china);
             const russia = data.map(d => d.russia);
             const turkey = data.map(d => d.turkey);
@@ -1050,6 +1027,15 @@
                 data: {
                     labels: labels,
                     datasets: [{
+                        label: '美国',
+                        data: usa,
+                        borderColor: '#8b5cf6',
+                        backgroundColor: 'rgba(139, 92, 246, 0.1)',
+                        fill: false,
+                        tension: 0.4,
+                        pointRadius: 4,
+                        pointHoverRadius: 6
+                    }, {
                         label: '中国',
                         data: china,
                         borderColor: '#ef4444',
@@ -1141,6 +1127,7 @@
             
             const latestData = data[data.length - 1];
             const countries = [
+                { key: 'usa', name: '美国', flag: '🇺🇸' },
                 { key: 'china', name: '中国', flag: '🇨🇳' },
                 { key: 'russia', name: '俄罗斯', flag: '🇷🇺' },
                 { key: 'turkey', name: '土耳其', flag: '🇹🇷' },
@@ -1192,42 +1179,70 @@
                 console.log('Price data success:', priceData.success);
                 console.log('Price data length:', priceData.data ? priceData.data.length : 0);
                 
-                if (summaryData.success) {
-                    updateMetrics(summaryData.data);
-                    document.getElementById('last-update').textContent = `最后更新: ${summaryData.last_update || '--'}`;
+                try {
+                    if (summaryData.success) {
+                        updateMetrics(summaryData.data);
+                        document.getElementById('last-update').textContent = `最后更新: ${summaryData.last_update || '--'}`;
+                    }
+                } catch (e) {
+                    console.error('更新指标失败:', e);
                 }
                 
-                if (priceData.success && priceData.data.length > 0) {
-                    initPriceChart(priceData.data, technicalData.data);
+                try {
+                    if (priceData.success && priceData.data.length > 0) {
+                        initPriceChart(priceData.data, technicalData.data);
+                    }
+                } catch (e) {
+                    console.error('初始化价格图表失败:', e);
                 }
                 
-                if (technicalData.success && technicalData.data.length > 0) {
-                    initIndicatorChart(technicalData.data);
+                try {
+                    if (technicalData.success && technicalData.data.length > 0) {
+                        initIndicatorChart(technicalData.data);
+                    }
+                } catch (e) {
+                    console.error('初始化指标图表失败:', e);
                 }
                 
-                if (sentimentData.success) {
-                    updateSentimentAnalysis(sentimentData);
+                try {
+                    if (sentimentData.success) {
+                        updateSentimentAnalysis(sentimentData);
+                    }
+                } catch (e) {
+                    console.error('更新情绪分析失败:', e);
                 }
                 
-                if (srData.success) {
-                    updateSupportResistance(srData.data);
+                try {
+                    if (srData.success) {
+                        updateSupportResistance(srData.data);
+                    }
+                } catch (e) {
+                    console.error('更新支撑阻力失败:', e);
                 }
                 
-                if (predictionsData.success) {
-                    updatePrediction(predictionsData.data);
+                try {
+                    if (predictionsData.success) {
+                        updatePrediction(predictionsData.data);
+                    }
+                } catch (e) {
+                    console.error('更新预测失败:', e);
                 }
                 
-                if (centralBankData.success && centralBankData.data.length > 0) {
-                    initCentralBankChart(centralBankData.data);
-                    updateCentralBankDetails(centralBankData.data);
+                try {
+                    if (centralBankData.success && centralBankData.data.length > 0) {
+                        initCentralBankChart(centralBankData.data);
+                        updateCentralBankDetails(centralBankData.data);
+                    }
+                } catch (e) {
+                    console.error('初始化央行图表失败:', e);
                 }
                 
             } catch (error) {
                 console.error('Error loading data:', error);
                 alert('加载数据失败，请稍后重试');
+            } finally {
+                hideLoading();
             }
-            
-            hideLoading();
         }
         
         async function refreshData() {
