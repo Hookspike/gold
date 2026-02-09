@@ -146,7 +146,7 @@ class CentralBankGoldReserves:
                 
                 real_data.append(data_point)
                 
-                current_date += timedelta(days=90)
+                current_date += timedelta(days=30)
             
             print(f"生成真实数据: {len(real_data)} 条记录")
             print("数据来源:")
